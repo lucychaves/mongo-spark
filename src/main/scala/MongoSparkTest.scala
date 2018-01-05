@@ -1,4 +1,4 @@
-package com
+package scala
 
 import com.mongodb.spark._
 import com.mongodb.spark.config.{ReadConfig, WriteConfig}
@@ -13,26 +13,29 @@ object MongoSparkTest extends App with LazyLogging {
 
   val sc = new SparkContext(conf)
 
-  // Lee una collection de la base y la guarda en un DF
+  // Read a collection from MongoDB
   val readConfig = ReadConfig(Map("uri" -> "mongodb://127.0.0.1/", "database" -> "test", "collection" -> "zips"))
+
+  // Save the collection into a DataFrame
   val testDF = sc.loadFromMongoDB(readConfig).toDF()
 
-  // Selecciona unas columnas del DF leido y crea uno nuevo
+  // Select some columns from the DF and create a new one
   val mod = testDF.select("city", "pop", "state")
 
-  // Settea la config para escribir el nuevo DF en la base
+  // Set the config to write the new DF in the database
   val writeConfig = WriteConfig(
     Map("uri" -> "mongodb://127.0.0.1/spark.processing", "database" -> "test", "collection" -> "test"))
 
-  // Escribe el DF en una nueva collection
+  // Write the new DF in a new collection
   MongoSpark.save(mod.write.option("collection", "collNameToUpdate").mode("overwrite"), writeConfig)
 
-  // Lee la nueva collection y la guarda en un DF
+  // Read the new collection to check if it was saved as expected
   val newReadConfig = ReadConfig(
     Map("uri" -> "mongodb://127.0.0.1/spark.processing", "database" -> "test", "collection" -> "test"))
+  
   val rModifiedDF = sc.loadFromMongoDB(newReadConfig).toDF()
 
-  // Muestra el contenido
+  // Show the content
   rModifiedDF.show()
 
 }
